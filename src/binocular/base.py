@@ -18,7 +18,7 @@ from .utils.logger import LoggingBase
 class Base(metaclass=LoggingBase):
     """Base class to all other classes within this project."""
 
-    BASE_IMAGE_FILE_PATH = pathlib.Path(__file__).parent.resolve() / "data/Dockerfile"
+    BASE_IMAGE_FILE_PATH = pathlib.Path(__file__).parent.resolve() / "data"
     docker_client = None
     base_image = None
     HEADERS = {"Content-Type": "application/json"}
@@ -107,15 +107,21 @@ class Base(metaclass=LoggingBase):
         """
         try:
             self.__logger.info(f"Building container image '{name}' with tag '{tag}'")
+            build_logs: list = []
             Base.base_image, build_logs = Base.docker_client.images.build(
                 path=str(self.BASE_IMAGE_FILE_PATH.parent), 
-                dockerfile=str(self.BASE_IMAGE_FILE_PATH.name),
+                dockerfile=f"data/Dockerfile",
                 tag=tag,
                 target=name,
+                nocache=True,
             )
+            self.__logger.debug(f"Docker logs for service '{name}'.")
+            for log in build_logs:
+                self.__logger.debug(f"\t{log}")
             return True
         except Exception as e:
-            self.__logger.critical(f"Unable to build image '{name}'.")
-            for item in build_logs:
-                self.__logger.critical(item)
+            self.__logger.critical(f"Unable to build image '{name}'. {e}")
+            if build_logs:
+                for item in build_logs:
+                    self.__logger.critical(item)
             return False
