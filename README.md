@@ -21,6 +21,8 @@
 
 ## Features
 
+Binocular is a Python package to extract IOCs from a string and look it up in a service using Docker sdk.
+
 - Checks wether or not Docker is installed, setup and running.
 - Builds and runs Docker containers for each service using Python.
 - Currently supported Docker containers are
@@ -29,7 +31,7 @@
 
 ## Requirements
 
-- TODO
+- Docker Desktop or the Docker CLI installed
 
 ## Installation
 
