@@ -36,23 +36,3 @@ class VirusTotal(Base):
                     response = Base.docker_client.containers.run(item.id, f'python virustotal.py "{self.api_key}" "{indicator}"')
                     return response.decode('utf-8')
 
-
-class VirusTotalService:
-
-    def run(self, argv):
-        import vt
-
-        client = vt.Client(argv[0])
-
-        url_id = vt.url_id(argv[1])
-        url = client.get_object('/urls/{}', url_id)
-
-        return_dict = {}
-        for item in dir(url):
-            if not item.startswith('_'):
-                return_dict[item] = getattr(url, item)
-        return return_dict
-
-
-if __name__ == "__main__":
-    print(VirusTotalService().run(sys.argv))

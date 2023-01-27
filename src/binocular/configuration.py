@@ -24,24 +24,11 @@ class ServiceConfiguration:
     supported_indicators: List = field(factory=list)
     api_key: AnyStr = field(factory=str, metadata={"question": Template("Please provide your $servicename API key: ")})
 
-
-@define
-class InternalConfiguration:
-    """Sets the internal configuration options for RC employees."""
-
-    portal_key: AnyStr = field(factory=str)
-    portal_cert_path: AnyStr = field(factory=str)
-    portal_cert_key_path: AnyStr = field(factory=str)
-    ca_cert_path: AnyStr = field(factory=str)
-    excluded_customer_list: List = field(factory=list)
-
-
 @define
 class Configuration:
     """The main configuration data model."""
 
     services: List[ServiceConfiguration] = field(factory=list)
-    internal: InternalConfiguration = field(factory=InternalConfiguration)
 
     def __attrs_post_init__(self):
         if self.services:
@@ -49,9 +36,6 @@ class Configuration:
             for item in self.services:
                 return_list.append(ServiceConfiguration(**item))
             self.services = return_list
-
-        if self.internal:
-            self.internal = InternalConfiguration(**self.internal)
 
 
 class ConfigurationManager(Base):
@@ -75,11 +59,18 @@ class ConfigurationManager(Base):
             Dict[str, str]: A dictionary of the provided answers to our configuration questions.
         """
         return_list = []
-
+        services = []
+        services.append(
+            {
+                "name": "virustotal",
+                "supported_indicators": [],
+                "api_key": self.session.prompt(fields(ServiceConfiguration).api_key.metadata["question"].substitute(servicename="VirusTotal"))
+            }
+        )
+        
         return asdict(
             Configuration(
-                virustotal=self.session.prompt(fields(Configuration).virustotal.metadata["question"].substitute()),
-                urlscanio=self.session.prompt(fields(Configuration).urlscanio.metadata["question"].substitute()),
+                services=services
             )
         )
 
