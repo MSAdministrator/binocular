@@ -5,6 +5,7 @@ import docker
 
 from .base import Base
 from .configuration import ConfigurationManager
+from .services.virustotal import VirusTotal
 
 
 class Binocular(Base):
@@ -13,6 +14,10 @@ class Binocular(Base):
     All commandline arguments will flow through this class. These will be defined as
     properties, methods and derived classes.
     """
+    
+    SUPPORTED_SERVICES = {
+        "virustotal": VirusTotal
+    }
 
     def __init__(self) -> None:
         """Main entry point, including pre-flight checks.
@@ -33,11 +38,6 @@ class Binocular(Base):
                 " for more information."
             )
         Base.docker_client = docker.from_env()
-        self._build_image(name="builder", tag="binocular.builder")
-
-        from .services.portalconfig import PortalConfig
-
-        print(PortalConfig())
 
     def get_config(self) -> Dict[str, str]:
         """Returns the current configuration file values.
@@ -62,37 +62,19 @@ class Binocular(Base):
         iocs = self._get_ioc_type(value=value)
         config = self.get_config()
         for service in self.config["services"]:
-            for key,val in self.config["services"][service].items():
-                if key == "supported_indicators":
-                    for ioc_type, ioc_val in iocs.items():
-                        if ioc_type in val:
-                            if ioc_val not in return_dict:
-                                return_dict[ioc_val] = {}
-                           # if service not in return_dict[ioc_val]:
-                            #    return_dict[ioc_val][service] = 
-                            return_dict[ioc_val].append()
-          #      for 
-        # for key, _val in config.items():
-        #     if self.SERVICE_MAP.get(key):
-        #         for k, v in iocs.items():
-        #             if self.SERVICE_MAP[key].get(k):
-        #                 if isinstance(v, list):
-        #                     for item in v:
-        #                         if item not in return_dict:
-        #                             return_dict[item] = {}
-        #                         if key not in return_dict[item]:
-        #                             return_dict[item][key] = []
-        #                         return_dict[item][key].append(self.SERVICE_MAP[key][k](item))
-        # return return_dict
-
-        for service in self.config.get("services"):
-            if service == "virustotal":
-                from .services.virustotal import VirusTotal
-
-              #  response = VirusTotal(api_key=self.config["services"][service].get("api_key")).run(indicator=)
-
-        from .services.virustotal import VirusTotal
-
-        resp = VirusTotal().run()
-        print(resp)
-        pass
+            if self.SUPPORTED_SERVICES.get(service.get("name")):
+                if service.get("supported_indicators"):
+                    for indicator in service["supported_indicators"]:
+                        self.__logger.debug(f"Checking indicator '{indicator}'.")
+                        if indicator not in return_dict:
+                            return_dict[indicator] = {}
+                        if service["name"] not in return_dict[indicator]:
+                            return_dict[indicator][service["name"]] = []
+                        if iocs.get(indicator) and iocs[indicator]:
+                            for value in iocs[indicator]:
+                                return_dict[indicator][service["name"]].append(self.SUPPORTED_SERVICES[service["name"]](api_key=service["api_key"]).run(value))
+                else:
+                    self.__logger.info(f"The service '{service['name']}' does not have a configuration for 'supported_indicators'.")
+            else:
+                self.__logger.info(f"The service '{service['name']}' is not currently supported.")
+        return return_dict
